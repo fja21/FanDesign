@@ -39,21 +39,21 @@ classdef FanDesign
         Vdot_d          % Actual Volumetric flow rate based on efficiency
         Vdot_dpre       % Preliminary Actual Volumetric flow rate based on efficiency
 
-        Vel_U1
-        Vel_U2
-        Vel_c_m1
-        Vel_c_u1
-        Vel_c_u2
-        Vel_c_m2
-        Vel_C1
-        Vel_C2
-        Vel_W1
-        Vel_W2
-        Vel_w_m1
-        Vel_w_m2
-        Vel_w_u1
-        Vel_w_u2
-        Vel_w_mean
+        Vel_U1          % Blade speed at inlet 
+        Vel_U2          % Blade speed at exit
+        Vel_c_m1        % Meridional velocity at inlet
+        Vel_c_u1        % Circumferential velocity at inlet
+        Vel_c_u2        % Circumferential velocity at exit
+        Vel_c_m2        % Meridional velocity at exit
+        Vel_C1          % Absolute velocity at inlet
+        Vel_C2          % Absolute velocity at exit
+        Vel_W1          % Relative velocity at inlet
+        Vel_W2          % Relative velocity at exit
+        Vel_w_m1        % Relative Meridional velocity at inlet
+        Vel_w_m2        % Relative Meridional velocity at exit
+        Vel_w_u1        % Relative Circumferential velocity at inlet
+        Vel_w_u2        % Relative Circumferential velocity at exit
+        Vel_w_mean      % Relative Mean velocity
 
         Vortex_a        % Control Coefficients for Controlled Vortex Loading distribution
         Vortex_b        % Control Coefficients for Controlled Vortex Loading distribution
@@ -129,7 +129,9 @@ classdef FanDesign
             if obj.loading ~= 0 || obj.loading ~= 1 || obj.loading ~= 2 || obj.loading ~= 3
                 % disp('ERROR - No valid blade loading distribution chosen (0=FV, 1=CV1, 2=CV2, 3=CV3)');
             end
-
+            
+            %%%%% inputArg1(2) %%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%
             obj.alpha1_bf = inputArg2(1,:);
             obj.delta_bf = inputArg2(2,:);
             obj.nu_bf    = inputArg2(3,:);
