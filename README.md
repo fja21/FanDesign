@@ -1,2 +1,2 @@
 # FanDesign
- GitHub repo of Free vortex and Conrtol vortex fan design methodology 
+ GitHub repo of Free vortex and Control vortex fan design methodology OOP
