@@ -1,9 +1,17 @@
 classdef FanDesign
-    %FANDESIGN Correct Axial Fan preliminary design following CITE
-    %   Detailed explanation goes here
+    %FANDESIGN Correct Axial Fan preliminary design following
+    %[kromerSoundEmissionLowpressure2017]
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%% Github Repo Code %%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%% A custom MATLAB® class definition containing "Class members" for
     %%%%% FanDesign: properties, methods, functions, events
-
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%  Description  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % Blade element theory is used in the design methodology for low pressure
+    % axial fans. The following code includes a free vortex and non-free vortex 
+    % design, the latter using multiple controlled vortex approaches, influencing 
+    % the loading distrubution. CV3 found suitiable for low noise designs%
     properties
         %% Roman Letters
 
