@@ -76,6 +76,9 @@ classdef FanDesign
         delta_bf        % Sweep angle for each section in Degrees (INPUT)
         dP_ts           % Total-to-Static Pressure Difference (INPUT)
         dP_tspre        % Preliminary Total-to-Static Pressure
+        dP_tsdpre
+        dP_ttpre        % Preliminary Total-to-Total Pressure
+        dP_ttdpre       % Preliminary design Total-to-Total Pressure difference
         dP_tt           % Total-to-Total Pressure Difference
         dP_ttd          % Total-to-Total Pressure Difference Actual
         dP_ttd_cor      % Total-to-Total Pressure Difference Actual and corrected for blade sweep
@@ -308,31 +311,29 @@ classdef FanDesign
             % Controlled Vortex Distrubtion Type 1 rCu2 = ar + b
             obj.dP_tspre = 0;
 
-            % while obj.dP_tspre > obj.dP_ts*1.01 || obj.dP_tspre <
-            % obj.dP_ts*0.99 
-
-            A = obj.Vortex_a;
-            B = obj.Vortex_b;
+            % while obj.dP_tspre > obj.dP_ts*1.01 || obj.dP_tspre < obj.dP_ts*0.99 
 
             int_k = 0; %Set initial guess of integration constant k
 
-            obj.Vdot_dpre = 0;
+            obj.Vdot_dpre = 0; % Set preliminary values of volumetric flow for iteration 
 
-            obj.Vdot_d = obj.Vdot/obj.eta_vol;
+            obj.Vdot_d = obj.Vdot;%/obj.eta_vol; % Set the actual voluematic flow rate (Eq 4.3)
 
+            % Iterate to within 0.1% 
             while obj.Vdot_dpre > obj.Vdot_d*1.001 || obj.Vdot_dpre < obj.Vdot_d*0.999
                 
-                % Controlled Vortex Type 1 (Eq 3.41)
+                % Controlled Vortex Type 1 (Eq 3.41) - break out parameters for ease of reading
                 A = obj.omega*obj.eta_h*obj.Vortex_a.*obj.r_bsi;
                 B = (obj.Vortex_a.^2).*(log(obj.r_bsi));
                 C = (obj.Vortex_a.*obj.Vortex_b)./obj.r_bsi;
 
-                D = sqrt( 2.*(A - B + C) + int_k);
-                obj.Vel_c_m2 = D;
+                % Calculate Cm2 using Eq 3.41
                 obj.Vel_c_m2 = sqrt( 2.*(A - B + C) + int_k);
 
+                % Calculate volumetric flow rate based on mass-flow average of Cm2 (Eq 3.44)            
                 obj.Vdot_dpre = trapz(obj.r_bsi,obj.Vel_c_m2.*obj.r_bsi)*2*pi;
 
+                % Update value of k based on disparity - this is crude but works. 
                 if obj.Vdot_dpre < obj.Vdot_d
                     int_k = int_k+0.01;
                 elseif obj.Vdot_dpre > obj.Vdot_d
@@ -342,82 +343,87 @@ classdef FanDesign
             % Log Integration K into object 
             obj.k = int_k;
 
-            obj.Vel_c_u2 = (obj.Vortex_a.*obj.r_bsi + obj.Vortex_b)./obj.r_bsi;            % Absolute circumferential Velocity at exit from vortex profile
-            obj.Vel_U1 = 2.*pi.*obj.n.*obj.r_bsi./60;   % Blade Speed at exit = inlet 
+            % Absolute circumferential Velocity at exit from vortex profile
+            obj.Vel_c_u2 = (obj.Vortex_a.*obj.r_bsi + obj.Vortex_b)./obj.r_bsi;
 
-            % Mass Average Velocity of Cm2 and Cu1
-            func1 = (obj.Vel_c_u2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
-            A = trapz(obj.r_bsi,func1)
-            func2 = (obj.Vel_c_m2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
-            B = trapz(obj.r_bsi,func2)
-
-            % obj.dP_ttd = obj.dP_ts + A + B;
-
-            obj.dP_ttd = obj.dP_ts + 0.5*obj.rho.*(A + B);
-            
-
-            % Blade Power
+            % Calculate design total-to-total pressure difference (Eq 3.29)
+            obj.dP_ttd = obj.omega.*obj.r_bsi.*obj.Vel_c_u2.*obj.eta_h.*obj.rho;
+                       
+            % Blade Power (Eq 3.45)
             obj.P_b = 2*pi*obj.rho*obj.omega.*trapz(obj.r_bsi,obj.Vel_c_m2.*obj.Vel_c_u2.*(obj.r_bsi.^2));
+            
             % Specific Blade Energy
-            obj.Y_bd = obj.P_b./(obj.rho.*obj.Vdot_dpre);
+            % obj.Y_bd = obj.P_b./(obj.rho.*obj.Vdot_dpre);
             % Specific Blade Energy for each section
-            obj.Y_bsd = obj.omega.*obj.r_bsi.*obj.Vel_c_u2;
+            % obj.Y_bsd = obj.omega.*obj.r_bsi.*obj.Vel_c_u2;
 
-            % Blade Skew Correction
-            % kk = (cosd(obj.delta_bf).^(0.62));
-            func1 = obj.dP_ttd*(cosd(obj.delta_bf).^(0.62))*obj.rho.*obj.Vel_c_m2.*2.*pi.*obj.r_bsi;
-            func2 = obj.dP_ttd*obj.rho.*obj.Vel_c_m2.*2.*pi.*obj.r_bsi;
+            % Blade Skew Correction useing (Eq 4.17)
+            func1 = obj.dP_ttd.*(cosd(obj.delta_bf).^(0.62))*obj.rho.*obj.Vel_c_m2.*2.*pi.*obj.r_bsi;
+            func2 = obj.dP_ttd.*obj.rho.*obj.Vel_c_m2.*2.*pi.*obj.r_bsi;
 
             func1r = trapz(obj.r_bsi,func1);
             func2r = trapz(obj.r_bsi,func2);
+            
+            % Corrected total-to-total pressure difference for each span
+            % section (Eq 4.19)
+            obj.dP_ttd_cor = (func2r/func1r).*obj.dP_ttd;
 
-            obj.dP_ttd_cor = (func2r/func1r)*obj.dP_ttd;
-
-            %% Velocity Triangles
-
+            %% Velocity Triangles - Checked MPB 05/06/2024
             % Entry Triangle
             obj.Vel_U1 = 2*pi*obj.n*obj.r_bsi/60;
 
-            obj.Vel_c_m1 = obj.Vdot./(pi*(obj.r_fan.^2 - obj.r_hub.^2));%%%%%% cm1=cm2 (see p29 & Appendix B)
-            obj.Vel_w_m1 = obj.Vdot./(pi*(obj.r_fan.^2 - obj.r_hub.^2));
-            obj.Vel_c_u1 = tand(obj.alpha1_bf).*obj.Vel_c_m1;       %obj.Vel_c_m1(i)/tand(obj.alpha1_bf(i));
+            obj.Vel_c_m1 = obj.Vel_c_m2; 
+            obj.Vel_w_m1 = obj.Vel_c_m1; 
+            obj.Vel_c_u1 = tand(obj.alpha1_bf).*obj.Vel_c_m1;
             obj.Vel_w_u1 = obj.Vel_U1 - obj.Vel_c_u1;
-            obj.beta1_bf = atand(obj.Vel_w_m1./obj.Vel_w_u1);       %atand(obj.Vel_c_m1(i)/(obj.Vel_U1(i)-obj.Vel_c_u1(i)));
 
-            obj.Vel_W1 = sqrt(obj.Vel_w_m1.^2 + obj.Vel_w_u1.^2);    %sqrt( obj.Vel_U1(i)^2 + obj.Vel_C1(i)^2 - 2*obj.Vel_U1(i)*obj.Vel_C1(i)*cosd(obj.alpha1_bf(i)));
+            % Relative flow angle
+            obj.beta1_bf = atand(obj.Vel_w_m1./obj.Vel_w_u1);
+
+            % Magnitudes of relative and absolute flow
+            obj.Vel_W1 = sqrt(obj.Vel_w_m1.^2 + obj.Vel_w_u1.^2);   
             obj.Vel_C1 = sqrt(obj.Vel_c_u1.^2 + obj.Vel_c_m1.^2);
 
             % Exit Triangle
             obj.Vel_U2 = obj.Vel_U1;
 
-            % obj.Vel_c_m2(i) = obj.Vdot/(pi*(obj.r_fan^2 - obj.r_hub^2));
-            obj.Vel_w_m2 = obj.Vel_c_m2; %obj.Vdot/(pi*(obj.r_fan^2 - obj.r_hub^2));
-            % obj.Vel_c_u2 = obj.Vortex_b./obj.r_bsi;
+            % obj.Vel_c_m2 is defined by Eq 3.41 
+            obj.Vel_w_m2 = obj.Vel_c_m2;
+            % obj.Vel_c_u2 is defined by Eq 3.38
+            obj.Vel_w_u2 = obj.Vel_U2 - obj.Vel_c_u2;
+
+            % Relative and absolute flow angles
+            obj.beta2_bf = atand(obj.Vel_w_m2./obj.Vel_w_u2);
             obj.alpha2_bf = atand(obj.Vel_c_m2./obj.Vel_c_u2);
 
+            % Magnitudes of relative and absolute flow
             obj.Vel_C2 = sqrt( obj.Vel_c_m2.^2 + obj.Vel_c_u2.^2);
             obj.Vel_W2 = sqrt( obj.Vel_U2.^2 + obj.Vel_C2.^2 - 2*obj.Vel_U2.*obj.Vel_C2.*cosd(obj.alpha2_bf));
 
-            obj.Vel_w_u2 = sqrt( obj.Vel_W2.^2 - obj.Vel_w_m2.^2);
-
-            obj.beta2_bf = atand(obj.Vel_w_m2./obj.Vel_w_u2);
-
+            % Mean relative velocity and relative flow angles. 
             obj.Vel_w_mean = 0.5*sqrt((obj.Vel_U1 + sqrt( obj.Vel_W2.^2 - obj.Vel_c_m1.^2)).^2 + 4*obj.Vel_c_m1.^2);
             obj.beta_bf_mean = atand((2*obj.Vel_c_m1)./(obj.Vel_U1 + sqrt(obj.Vel_W2.^2 - obj.Vel_c_m1.^2)));
 
             %% Total-to-Static Pressure Check
 
-            % Need to recalculate total-to-static pressure using calculated
-            % values and update the loop.
-            % Use the dP_tt = dP_tt + dynamic equation again, due to the
-            % correction
-            %
+            % Need to recalculate total-to-static pressure using calculated values and update the loop. Use equation Eq 4.4
+            
+            % Mass flow average of corrected total-to-total pressure difference (Use Eq 4.18)
+            % func22 = obj.dP_ttd_cor.*obj.rho.*obj.Vel_c_m2.*obj.r_bsi;
+            func22 = obj.dP_ttd_cor.*obj.Vel_c_m2.*obj.r_bsi*2*pi*obj.rho;
 
-            obj.dP_tt = obj.dP_ttd_cor*obj.eta_h;
-            obj.dP_tspre = obj.dP_ttd_cor*obj.eta_h - 0.5*obj.rho.*(A+B);
-            Out = obj.dP_tspre;
-            b = obj.Vortex_b;
-        
+            % func22 = obj.dP_ttd_cor.*2.*pi.*obj.r_bsi
+            obj.dP_ttdpre = trapz(obj.r_bsi,func22);
+            % obj.dP_ttdpre = mean(obj.dP_ttd_cor)
+
+            % Mass Averaged Velocity of Cm2 and Cu1
+            func_Cu2 = (obj.Vel_c_u2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
+            A = trapz(obj.r_bsi,func_Cu2)
+            func_Cm2 = (obj.Vel_c_m2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
+            B = trapz(obj.r_bsi,func_Cm2)
+
+            obj.dP_tsdpre = obj.dP_ttdpre*obj.eta_h - 0.5*obj.rho.*(A+B);
+                    
             %
             %     if obj.dP_tspre > obj.dP_ts
             %
