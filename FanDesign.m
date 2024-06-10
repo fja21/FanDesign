@@ -9,8 +9,8 @@ classdef FanDesign
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%  Description  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Blade element theory is used in the design methodology for low pressure
-    % axial fans. The following code includes a free vortex and non-free vortex 
-    % design, the latter using multiple controlled vortex approaches, influencing 
+    % axial fans. The following code includes a free vortex and non-free vortex
+    % design, the latter using multiple controlled vortex approaches, influencing
     % the loading distrubution. CV3 found suitiable for low noise designs%
     properties
         %% Roman Letters
@@ -39,7 +39,7 @@ classdef FanDesign
         Vdot_d          % Actual Volumetric flow rate based on efficiency
         Vdot_dpre       % Preliminary Actual Volumetric flow rate based on efficiency
 
-        Vel_U1          % Blade speed at inlet 
+        Vel_U1          % Blade speed at inlet
         Vel_U2          % Blade speed at exit
         Vel_c_m1        % Meridional velocity at inlet
         Vel_c_u1        % Circumferential velocity at inlet
@@ -132,7 +132,7 @@ classdef FanDesign
             if obj.loading ~= 0 || obj.loading ~= 1 || obj.loading ~= 2 || obj.loading ~= 3
                 % disp('ERROR - No valid blade loading distribution chosen (0=FV, 1=CV1, 2=CV2, 3=CV3)');
             end
-            
+
             %%%%% inputArg1(2) %%%%%
             %%%%%%%%%%%%%%%%%%%%%%%%
             obj.alpha1_bf = inputArg2(1,:);
@@ -155,7 +155,7 @@ classdef FanDesign
             obj.Vortex_e = inputArg4(4);
             obj.Vortex_m = inputArg4(5);
 
-            % Some basic parameters to calculate from Inputs 
+            % Some basic parameters to calculate from Inputs
             obj.T = inputArg1(11);
             obj.P_amb = inputArg1(12);
             obj.dP_ts = inputArg1(13);
@@ -311,17 +311,19 @@ classdef FanDesign
             % Controlled Vortex Distrubtion Type 1 rCu2 = ar + b
             obj.dP_tspre = 0;
 
-            % while obj.dP_tspre > obj.dP_ts*1.01 || obj.dP_tspre < obj.dP_ts*0.99 
+            % for jj = 1:obj.z_bf % For each of the spanwise layers
+            
+            % while obj.dP_tspre > obj.dP_ts*1.01 || obj.dP_tspre < obj.dP_ts*0.99
 
             int_k = 0; %Set initial guess of integration constant k
 
-            obj.Vdot_dpre = 0; % Set preliminary values of volumetric flow for iteration 
+            obj.Vdot_dpre = 0; % Set preliminary values of volumetric flow for iteration
 
             obj.Vdot_d = obj.Vdot;%/obj.eta_vol; % Set the actual voluematic flow rate (Eq 4.3)
 
-            % Iterate to within 0.1% 
-            while obj.Vdot_dpre > obj.Vdot_d*1.001 || obj.Vdot_dpre < obj.Vdot_d*0.999
-                
+            % Iterate to within 0.1%
+            while obj.Vdot_dpre > obj.Vdot_d*1.01 || obj.Vdot_dpre < obj.Vdot_d*0.99
+
                 % Controlled Vortex Type 1 (Eq 3.41) - break out parameters for ease of reading
                 A = obj.omega*obj.eta_h*obj.Vortex_a.*obj.r_bsi;
                 B = (obj.Vortex_a.^2).*(log(obj.r_bsi));
@@ -330,17 +332,17 @@ classdef FanDesign
                 % Calculate Cm2 using Eq 3.41
                 obj.Vel_c_m2 = sqrt( 2.*(A - B + C) + int_k);
 
-                % Calculate volumetric flow rate based on mass-flow average of Cm2 (Eq 3.44)            
+                % Calculate volumetric flow rate based on mass-flow average of Cm2 (Eq 3.44)
                 obj.Vdot_dpre = trapz(obj.r_bsi,obj.Vel_c_m2.*obj.r_bsi)*2*pi;
 
-                % Update value of k based on disparity - this is crude but works. 
+                % Update value of k based on disparity - this is crude but works.
                 if obj.Vdot_dpre < obj.Vdot_d
                     int_k = int_k+0.01;
                 elseif obj.Vdot_dpre > obj.Vdot_d
                     int_k = int_k-0.01;
                 end
             end
-            % Log Integration K into object 
+            % Log Integration K into object
             obj.k = int_k;
 
             % Absolute circumferential Velocity at exit from vortex profile
@@ -348,10 +350,10 @@ classdef FanDesign
 
             % Calculate design total-to-total pressure difference (Eq 3.29)
             obj.dP_ttd = obj.omega.*obj.r_bsi.*obj.Vel_c_u2.*obj.eta_h.*obj.rho;
-                       
+
             % Blade Power (Eq 3.45)
             obj.P_b = 2*pi*obj.rho*obj.omega.*trapz(obj.r_bsi,obj.Vel_c_m2.*obj.Vel_c_u2.*(obj.r_bsi.^2));
-            
+
             % Specific Blade Energy
             % obj.Y_bd = obj.P_b./(obj.rho.*obj.Vdot_dpre);
             % Specific Blade Energy for each section
@@ -363,7 +365,7 @@ classdef FanDesign
 
             func1r = trapz(obj.r_bsi,func1);
             func2r = trapz(obj.r_bsi,func2);
-            
+
             % Corrected total-to-total pressure difference for each span
             % section (Eq 4.19)
             obj.dP_ttd_cor = (func2r/func1r).*obj.dP_ttd;
@@ -372,8 +374,8 @@ classdef FanDesign
             % Entry Triangle
             obj.Vel_U1 = 2*pi*obj.n*obj.r_bsi/60;
 
-            obj.Vel_c_m1 = obj.Vel_c_m2; 
-            obj.Vel_w_m1 = obj.Vel_c_m1; 
+            obj.Vel_c_m1 = obj.Vel_c_m2;
+            obj.Vel_w_m1 = obj.Vel_c_m1;
             obj.Vel_c_u1 = tand(obj.alpha1_bf).*obj.Vel_c_m1;
             obj.Vel_w_u1 = obj.Vel_U1 - obj.Vel_c_u1;
 
@@ -381,13 +383,13 @@ classdef FanDesign
             obj.beta1_bf = atand(obj.Vel_w_m1./obj.Vel_w_u1);
 
             % Magnitudes of relative and absolute flow
-            obj.Vel_W1 = sqrt(obj.Vel_w_m1.^2 + obj.Vel_w_u1.^2);   
+            obj.Vel_W1 = sqrt(obj.Vel_w_m1.^2 + obj.Vel_w_u1.^2);
             obj.Vel_C1 = sqrt(obj.Vel_c_u1.^2 + obj.Vel_c_m1.^2);
 
             % Exit Triangle
             obj.Vel_U2 = obj.Vel_U1;
 
-            % obj.Vel_c_m2 is defined by Eq 3.41 
+            % obj.Vel_c_m2 is defined by Eq 3.41
             obj.Vel_w_m2 = obj.Vel_c_m2;
             % obj.Vel_c_u2 is defined by Eq 3.38
             obj.Vel_w_u2 = obj.Vel_U2 - obj.Vel_c_u2;
@@ -400,31 +402,31 @@ classdef FanDesign
             obj.Vel_C2 = sqrt( obj.Vel_c_m2.^2 + obj.Vel_c_u2.^2);
             obj.Vel_W2 = sqrt( obj.Vel_U2.^2 + obj.Vel_C2.^2 - 2*obj.Vel_U2.*obj.Vel_C2.*cosd(obj.alpha2_bf));
 
-            % Mean relative velocity and relative flow angles. 
+            % Mean relative velocity and relative flow angles.
             obj.Vel_w_mean = 0.5*sqrt((obj.Vel_U1 + sqrt( obj.Vel_W2.^2 - obj.Vel_c_m1.^2)).^2 + 4*obj.Vel_c_m1.^2);
             obj.beta_bf_mean = atand((2*obj.Vel_c_m1)./(obj.Vel_U1 + sqrt(obj.Vel_W2.^2 - obj.Vel_c_m1.^2)));
 
             %% Total-to-Static Pressure Check
-
             % Need to recalculate total-to-static pressure using calculated values and update the loop. Use equation Eq 4.4
-            
+
             % Mass flow average of corrected total-to-total pressure difference (Use Eq 4.18)
             % func22 = obj.dP_ttd_cor.*obj.rho.*obj.Vel_c_m2.*obj.r_bsi;
             func22 = obj.dP_ttd_cor.*obj.Vel_c_m2.*obj.r_bsi*2*pi*obj.rho;
 
             % func22 = obj.dP_ttd_cor.*2.*pi.*obj.r_bsi
-            obj.dP_ttdpre = trapz(obj.r_bsi,func22);
-            % obj.dP_ttdpre = mean(obj.dP_ttd_cor)
+            % obj.dP_ttdpre = trapz(obj.r_bsi,func22);
+            obj.dP_ttdpre = mean(obj.dP_ttd_cor)
 
             % Mass Averaged Velocity of Cm2 and Cu1
-            func_Cu2 = (obj.Vel_c_u2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
-            A = trapz(obj.r_bsi,func_Cu2)
-            func_Cm2 = (obj.Vel_c_m2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
-            B = trapz(obj.r_bsi,func_Cm2)
+            % func_Cu2 = (obj.Vel_c_u2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
+            % A = trapz(obj.r_bsi,func_Cu2)
+            % func_Cm2 = (obj.Vel_c_m2.^2).*(obj.Vel_c_m2).*obj.rho.*2*pi.*obj.r_bsi;
+            % B = trapz(obj.r_bsi,func_Cm2)
 
-            obj.dP_tsdpre = obj.dP_ttdpre*obj.eta_h - 0.5*obj.rho.*(A+B);
-                    
-            %
+            % obj.dP_tsdpre = obj.dP_ttdpre*obj.eta_h - 0.5*obj.rho.*(A+B);
+            obj.dP_tsdpre = obj.dP_ttd_cor.*obj.eta_h - 0.5.*obj.rho.*(obj.Vel_c_m2.^2 + obj.Vel_c_u2.^2);
+
+            obj.dP_ttdpre = mean(obj.dP_tsdpre)
             %     if obj.dP_tspre > obj.dP_ts
             %
             %         obj.Vortex_b = obj.Vortex_b - 0.01;
@@ -433,25 +435,25 @@ classdef FanDesign
             %
             %         obj.Vortex_b = obj.Vortex_b + 0.01;
             %
-        
-        %
-        % end
 
-        % while (CHECK parameter B)
-        % loading distribution
-        % while (CHECK A)
-        % total pressure difference
-        % blade Skew
-        % Velocity Diagrams
-        % Total-to-static pressure
-        % end
-        % end
-        % dimensionless number s
+            %
+            % end
+
+            % while (CHECK parameter B)
+            % loading distribution
+            % while (CHECK A)
+            % total pressure difference
+            % blade Skew
+            % Velocity Diagrams
+            % Total-to-static pressure
+            % end
+            % end
+            % dimensionless number s
+
+
+        end
 
 
     end
-
-
-end
 end
 

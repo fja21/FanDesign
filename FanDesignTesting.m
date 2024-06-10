@@ -83,13 +83,13 @@ TestFan3(1,:) = [7.1 6.6 6.2 5.8 5.5 5.1 4.8 4.5 4.3 4]; %Angle of Attack
 TestFan3(2,:) = [0 8.5 16 22.8 29 34.8 40.3 45.4 50.3 55]; % delta Sweep Angle 
 TestFan3(3,:) = [0 3.3 5.4 8.2 9.9 12.5 15 17.4 19.7 23]; % Dihedral Angle nu
 
-
+TestFan2 = 'NACA 4510';
 
 TestFan4 = zeros(1,5);
 TestFan4(1) = 3;    % a 
 TestFan4(2) = 1.02; %1.115;  % b %1.48;
 
-CaseS2F = FanDesign(TestFan1,TestFan3,TestFan2,TestFan4);
+CaseS2F = FanDesign_layers(TestFan1,TestFan3,TestFan2,TestFan4);
 
 return
 %%
@@ -111,8 +111,10 @@ b = (r.*cu2)./(6*r)
 cu22 = (3.*r + 1.02)./r
 
 a = (r.*cu2 - 1.02)./r
+%% Pressure checking reference answers. 
 
-%%
+% BAsed on Ps = 140, and dynamic pressure - does it sum to reported Pt?
+clc
 cu2 = [14.313 12.797 11.763 11.000 10.406 9.928 9.532 9.193 8.908 8.657];
 cm2 = [8.908 9.160 9.487 9.835 10.182 10.520 10.845 11.158 11.457 11.744];
 
@@ -120,7 +122,11 @@ r = [0.248 0.286 0.320 .350 0.378 0.404 0.429 0.452 0.474 0.495]/2;
 
 dP_ttd = 157.0796.*r.*cu2.*0.9.*1.2041
 
-2.*pi.*1.2041*trapz(dP_ttd.*(r),r)
+p2t = 140 + 0.5*1.2041*(cu2.^2 + cm2.^2)
+
+% trapz(r,p2t*2*pi*1.2041.*r.*cm2)
+
+
 
 
 
